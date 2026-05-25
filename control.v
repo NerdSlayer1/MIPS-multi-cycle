@@ -36,6 +36,7 @@ PCSource, ALUSrcB, ALUSrcA, RegWrite, RegDst, PCSel, ALUOp);
 	parameter RTYPEEND = 4'b0111;
 	parameter BEQ = 4'b1000;
   parameter LOADI = 4'b1001;
+  parameter ADDI3 = 4'b1010;
 
 	reg [3:0] state;
 	reg [3:0] nextstate;
@@ -57,6 +58,7 @@ PCSource, ALUSrcB, ALUSrcA, RegWrite, RegDst, PCSel, ALUOp);
                    6'b000000:	nextstate = EXECUTION;//r
                    6'b000100:	nextstate = BEQ;//beq
                    6'b011111:	nextstate = LOADI;//loadi
+                   6'b011110:	nextstate = ADDI3;//addi3
                    default: nextstate = FETCH;
                  endcase
 
@@ -72,6 +74,7 @@ PCSource, ALUSrcB, ALUSrcA, RegWrite, RegDst, PCSel, ALUOp);
         RTYPEEND: nextstate = FETCH;
         BEQ:   nextstate = FETCH;
         LOADI: nextstate = FETCH;
+        ADDI3: nextstate = FETCH;
         default: nextstate = FETCH;
       endcase
     end
@@ -134,6 +137,13 @@ PCSource, ALUSrcB, ALUSrcA, RegWrite, RegDst, PCSel, ALUOp);
           begin
             RegWrite = 1'b1;
             RegDst   = 1'b0;
+          end
+        ADDI3:
+          begin
+            RegWrite = 1'b1;
+            RegDst   = 1'b0;
+            ALUSrcA  = 1'b1;
+            ALUOp    = 2'b11;
           end
 
       endcase

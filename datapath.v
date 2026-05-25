@@ -128,7 +128,8 @@ PCSource, ALUSrcB, ALUSrcA, RegWrite, RegDst, PCSel, ALUCtrl, Op, Zero, Function
 
 	assign Zero = (ALUResult==0);//Zero == 1 when ALUResult is 0 (for branch)
 
-	always @(ALUCtrl or OpA or OpB) begin
+
+	always @(ALUCtrl or OpA or OpB or A or B or Instruction) begin
 		case(ALUCtrl)
 		4'b0000:ALUResult = OpA & OpB;
 		4'b0001:ALUResult = OpA | OpB;
@@ -136,8 +137,10 @@ PCSource, ALUSrcB, ALUSrcA, RegWrite, RegDst, PCSel, ALUCtrl, Op, Zero, Function
 		4'b0110:ALUResult = OpA - OpB;
 		4'b0111:ALUResult = OpA < OpB?1:0;
 		4'b1100:ALUResult = ~(OpA | OpB);
+		4'b1101:ALUResult = A + B + {{16{Instruction[15]}},Instruction[15:0]}; // ADDI3
 		endcase
 	end
+
 
 	//ALUOut register
 
