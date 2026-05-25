@@ -95,8 +95,13 @@ PCSource, ALUSrcB, ALUSrcA, RegWrite, RegDst, PCSel, ALUCtrl, Op, Zero, Function
 
 	always @(posedge clk) begin
 		if (RegWrite)begin
-			if (Op == 6'h1F) // LOADI: rd = imm16
+			if (Op == 6'h1F) // LOADI
 				registers[Instruction[20:16]] <= {{16{Instruction[15]}}, Instruction[15:0]};
+			else if (Op == 6'h1E) // SWAP
+				begin
+					registers[Instruction[25:21]] <= B;
+					registers[Instruction[20:16]] <= A;
+				end
 			else if (RegDst)
 				registers[Instruction[15:11]]<=(MemtoReg)?mdr:ALUOut;
 			else
