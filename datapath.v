@@ -95,13 +95,14 @@ PCSource, ALUSrcB, ALUSrcA, RegWrite, RegDst, PCSel, ALUCtrl, Op, Zero, Function
 
 	always @(posedge clk) begin
 		if (RegWrite)begin
-			if (RegDst)
+			if (Op == 6'h1F) // LOADI: rd = imm16
+				registers[Instruction[20:16]] <= {{16{Instruction[15]}}, Instruction[15:0]};
+			else if (RegDst)
 				registers[Instruction[15:11]]<=(MemtoReg)?mdr:ALUOut;
 			else
 				registers[Instruction[20:16]]<=(MemtoReg)?mdr:ALUOut;
 		end
 	end
-
 	//A and B registers
 
 	always @(posedge clk) begin

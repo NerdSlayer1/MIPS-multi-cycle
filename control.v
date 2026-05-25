@@ -35,6 +35,7 @@ PCSource, ALUSrcB, ALUSrcA, RegWrite, RegDst, PCSel, ALUOp);
 	parameter EXECUTION = 4'b0110;
 	parameter RTYPEEND = 4'b0111;
 	parameter BEQ = 4'b1000;
+  parameter LOADI = 4'b1001;
 
 	reg [3:0] state;
 	reg [3:0] nextstate;
@@ -50,13 +51,15 @@ PCSource, ALUSrcB, ALUSrcA, RegWrite, RegDst, PCSel, ALUOp);
       	case (state)
         FETCH:  nextstate = DECODE;
         DECODE:  case(Op)
-					//OpCode
+				  //OpCode
                    6'b100011:	nextstate = MEMADRCOMP;//lw
                    6'b101011:	nextstate = MEMADRCOMP;//sw
                    6'b000000:	nextstate = EXECUTION;//r
                    6'b000100:	nextstate = BEQ;//beq
+                   6'b011111:	nextstate = LOADI;//loadi
                    default: nextstate = FETCH;
                  endcase
+
         MEMADRCOMP:  case(Op)
                    6'b100011:      nextstate = MEMACCESSL;//lw
                    6'b101011:      nextstate = MEMACCESSS;//sw
@@ -68,6 +71,7 @@ PCSource, ALUSrcB, ALUSrcA, RegWrite, RegDst, PCSel, ALUOp);
         EXECUTION: nextstate = RTYPEEND;
         RTYPEEND: nextstate = FETCH;
         BEQ:   nextstate = FETCH;
+        LOADI: nextstate = FETCH;
         default: nextstate = FETCH;
       endcase
     end
@@ -126,6 +130,12 @@ PCSource, ALUSrcB, ALUSrcA, RegWrite, RegDst, PCSel, ALUOp);
             PCWriteCond = 1'b1;
 	    PCSource = 2'b01;
           end
+        LOADI:
+          begin
+            RegWrite = 1'b1;
+            RegDst   = 1'b0;
+          end
+
       endcase
     end
 endmodule
