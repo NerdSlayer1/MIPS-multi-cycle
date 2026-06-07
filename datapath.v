@@ -1,156 +1,129 @@
 module datapath(clk, reset, IorD, MemRead, MemWrite, MemtoReg, IRWrite,
-PCSource, ALUSrcB, ALUSrcA, RegWrite, RegDst, PCSel, ALUCtrl, Op, Zero, Function);
+PCSource, ALUSrcB, ALUSrcA, RegWrite, RegDst, PCSel, ALUCtrl, Op, Zero, GT, Function);
 
-	parameter PCSTART = 128; //starting address of instruction memory
-	input clk;
-	input reset;
-	input IorD;
-	input MemWrite,MemRead,MemtoReg;
-	input IRWrite;
-	input PCSource;
-	input RegDst,RegWrite;
-	input ALUSrcA;
-	input [1:0] ALUSrcB;
-	input PCSel;
-	input [3:0] ALUCtrl;
+    parameter PCSTART = 128;
 
-	output [5:0] Op;
-	output Zero;
-	output [5:0] Function;
+    input clk, reset;
+    input IorD;
+    input MemWrite, MemRead, MemtoReg;
+    input IRWrite;
+    input PCSource;
+    input RegDst, RegWrite;
+    input ALUSrcA;
+    input [1:0] ALUSrcB;
+    input PCSel;
+    input [3:0] ALUCtrl;
 
-	reg [7:0]PC;
+    output [5:0] Op;
+    output Zero;
+    output GT;
+    output [5:0] Function;
 
-	reg [31:0] ALUOut;
-
-	reg [31:0] ALUResult;
-	wire [31:0] OpA;
-	reg [31:0] OpB;
-
-	reg [31:0]A;
-	reg [31:0]B;
-
-	wire [7:0] address;
-
+    reg [7:0] PC;
+    reg [31:0] ALUOut;
+    reg [31:0] ALUResult;
+    wire [31:0] OpA;
+    reg [31:0] OpB;
+    reg [31:0] A, B;
+    wire [7:0] address;
     wire [31:0] MemData;
+    reg [31:0] mem[255:0];
+    reg [31:0] Instruction;
+    reg [31:0] mdr;
+    wire [31:0] da, db;
+    reg [31:0] registers[31:0];
 
-	reg[31:0]mem[255:0];
+    assign Function = Instruction[5:0];
+    assign Op       = Instruction[31:26];
+    assign address  = (IorD) ? ALUOut : PC;
 
-	reg [31:0]Instruction;
+    initial
+        $readmemh("mem.dat", mem);
 
-	reg [31:0]mdr;
+    always @(posedge clk) begin
+        if (MemWrite)
+            mem[address] <= B;
+    end
 
-	wire [31:0] da;//read data 1
-	wire [31:0] db;//read data 2
+    assign MemData = (MemRead) ? mem[address] : 32'bx;
 
-	reg[31:0]registers[31:0];
+    always @(posedge clk) begin
+        if (reset)
+            PC <= PCSTART;
+        else if (PCSel) begin
+            case (PCSource)
+                1'b0: PC <= ALUResult;
+                1'b1: PC <= ALUOut;
+            endcase
+        end
+    end
 
-	assign Function=Instruction[5:0];
-	assign Op=Instruction[31:26];
+    always @(posedge clk) begin
+        if (IRWrite)
+            Instruction <= MemData;
+    end
 
-	//data and instruction memory
-	assign address=(IorD)?ALUOut:PC;
+    always @(posedge clk) begin
+        mdr <= MemData;
+    end
 
-	initial
-		$readmemh("mem.dat", mem);
+    assign da = (Instruction[25:21] != 0) ? registers[Instruction[25:21]] : 0;
+    assign db = (Instruction[20:16] != 0) ? registers[Instruction[20:16]] : 0;
 
-	always @(posedge clk) begin
-		if(MemWrite)
-			mem[address]<=B;
-	end
+    always @(posedge clk) begin
+        if (RegWrite) begin
+            if (Op == 6'h1F)
+                registers[Instruction[20:16]] <= {{16{Instruction[15]}}, Instruction[15:0]};
+            else if (Op == 6'h1D) begin
+                registers[Instruction[25:21]] <= B;
+                registers[Instruction[20:16]] <= A;
+            end
+            else if (Op == 6'h1A)
+                registers[29] <= registers[29] - 4;
+            else if (Op == 6'h19) begin
+                registers[Instruction[20:16]] <= mdr;
+                registers[29] <= registers[29] + 4;
+            end
+            else if (RegDst)
+                registers[Instruction[15:11]] <= (MemtoReg) ? mdr : ALUOut;
+            else
+                registers[Instruction[20:16]] <= (MemtoReg) ? mdr : ALUOut;
+        end
+    end
 
-	assign
-		MemData =(MemRead)? mem[address]:32'bx;
+    always @(posedge clk) A <= da;
+    always @(posedge clk) B <= db;
 
-	//PC logic
+    assign OpA = (ALUSrcA) ? A : PC;
 
-	always@ (posedge clk)begin
-		if(reset)
-			PC<=PCSTART;
-		else
-		if(PCSel)begin
-			case (PCSource)
-				1'b0: PC<=ALUResult;
-				1'b1: PC<=ALUOut;
-			endcase
-		end
-	end
+    always @(ALUSrcB or B or Instruction[15:0]) begin
+        casex (ALUSrcB)
+            2'b00: OpB = B;
+            2'b01: OpB = 1;
+            2'b10: OpB = {{16{Instruction[15]}}, Instruction[15:0]};
+            2'b11: OpB = {{16{Instruction[15]}}, Instruction[15:0]};
+        endcase
+    end
 
-	//instruction register
+    assign Zero = (ALUResult == 0);
+    assign GT   = (!ALUResult[31] && (ALUResult != 0));
 
-	always @(posedge clk) begin
-		if (IRWrite)
-			Instruction <= MemData;
-	end
+    always @(ALUCtrl or OpA or OpB or A or B or Instruction) begin
+        case (ALUCtrl)
+            4'b0000: ALUResult = OpA & OpB;
+            4'b0001: ALUResult = OpA | OpB;
+            4'b0010: ALUResult = OpA + OpB;
+            4'b0110: ALUResult = OpA - OpB;
+            4'b0111: ALUResult = (OpA < OpB) ? 1 : 0;
+            4'b1100: ALUResult = ~(OpA | OpB);
+            4'b1101: ALUResult = A + B + {{16{Instruction[15]}}, Instruction[15:0]};
+            4'b1110: ALUResult = A * B;
+            default: ALUResult = 0;
+        endcase
+    end
 
-	//memory data register
-	always @(posedge clk) begin
-		mdr <= MemData;
-	end
-
-	//register file
-	//$r0 is always 0
-	assign da = (Instruction[25:21]!=0) ? registers[Instruction[25:21]] : 0;
-	assign db = (Instruction[20:16]!=0) ? registers[Instruction[20:16]] : 0;
-
-
-	always @(posedge clk) begin
-		if (RegWrite)begin
-			if (Op == 6'h1F) // LOADI
-				registers[Instruction[20:16]] <= {{16{Instruction[15]}}, Instruction[15:0]};
-			else if (Op == 6'h1E) // SWAP
-				begin
-					registers[Instruction[25:21]] <= B;
-					registers[Instruction[20:16]] <= A;
-				end
-			else if (RegDst)
-				registers[Instruction[15:11]]<=(MemtoReg)?mdr:ALUOut;
-			else
-				registers[Instruction[20:16]]<=(MemtoReg)?mdr:ALUOut;
-		end
-	end
-	//A and B registers
-
-	always @(posedge clk) begin
-		A<=da;
-	end
-
-	always@(posedge clk) begin
-		B<=db;
-	end
-
-
-	//ALU
-
-	assign OpA=(ALUSrcA)?A:PC;
-
-	always@(ALUSrcB or B or Instruction[15:0])begin
-		casex(ALUSrcB)
-		2'b00:OpB=B;
-		2'b01:OpB=1;
-		2'b1x:OpB={{(16){Instruction[15]}},Instruction[15:0]};
-		endcase
-	end
-
-	assign Zero = (ALUResult==0);//Zero == 1 when ALUResult is 0 (for branch)
-
-
-	always @(ALUCtrl or OpA or OpB or A or B or Instruction) begin
-		case(ALUCtrl)
-		4'b0000:ALUResult = OpA & OpB;
-		4'b0001:ALUResult = OpA | OpB;
-		4'b0010:ALUResult = OpA + OpB;
-		4'b0110:ALUResult = OpA - OpB;
-		4'b0111:ALUResult = OpA < OpB?1:0;
-		4'b1100:ALUResult = ~(OpA | OpB);
-		4'b1101:ALUResult = A + B + {{16{Instruction[15]}},Instruction[15:0]}; // ADDI3
-		endcase
-	end
-
-
-	//ALUOut register
-
-	always@(posedge clk) begin
-		ALUOut<=ALUResult;
-	end
+    always @(posedge clk) begin
+        ALUOut <= ALUResult;
+    end
 
 endmodule
