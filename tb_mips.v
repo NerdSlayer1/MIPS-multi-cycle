@@ -37,35 +37,42 @@ module tb_mips;
 
         #90; 
         check_register(29, 32'd200, "SP Ilklendirme");
-        check_register(8, 32'd10, "LOADI t0");
-        check_register(9, 32'd20, "LOADI t1");
+        check_register(8,  32'd10,  "LOADI t0");
+        check_register(9,  32'd20,  "LOADI t1");
 
         #30; 
-        check_register(10, 32'd35, "ADDI3 Komutu");
+        check_register(10, 32'd35,  "ADDI3 Komutu");
 
         #30;
-        check_register(8, 32'd20, "SWAP Komutu (t0 Kontrol)");
-        check_register(9, 32'd10, "SWAP Komutu (t1 Kontrol)");
-
-        #30;
-        check_register(11, 32'd200, "MUL Komutu");
+        check_register(8,  32'd20,  "SWAP Komutu (t0)");
+        check_register(9,  32'd10,  "SWAP Komutu (t1)");
 
         #40;
+        check_register(11, 32'd200, "MUL Komutu");
+
+        #50;
         if (mips_DUT.datapath_D.mem[200] !== 32'd200) begin
-            $display("[HATA] PUSH Komutu | Bellek yazimi basarisiz.");
+            $display("[HATA] PUSH Komutu | RAM[200] beklenen: 200, alinan: %0d",
+                     mips_DUT.datapath_D.mem[200]);
             $stop;
         end else begin
-            $display("[BASARILI] PUSH Komutu | Bellek yazimi dogrulandi.");
+            $display("[BASARILI] PUSH Komutu | RAM[200] = 200 dogrulandi.");
         end
 
-        #50;
-        check_register(12, 32'd200, "POP Komutu"); 
-
         #60;
-        check_register(14, 32'd100, "BGT Komutu / Branch Dogrulama");
+        check_register(12, 32'd200, "POP Komutu");
+
+        #70;
+        if (mips_DUT.datapath_D.registers[13] === 32'd99) begin
+            $display("[HATA] BGT Komutu | Branch atlanmadi, R13 (t5) = 99 yazildi.");
+            $stop;
+        end else begin
+            $display("[BASARILI] BGT Komutu | Ara komut atlandi (R13 != 99).");
+        end
+        check_register(14, 32'd100, "BGT Komutu (t6)");
 
         #50;
-        $display("--- Tum Testler Basariyla Tamamlandi ---");
+        $display("--- TOPLAM: 10 / 10 BASARILI ---");
         $stop;
     end
 

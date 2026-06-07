@@ -9,7 +9,6 @@ R_FUNCTS = {
     "xor": 0x26,
     "slt": 0x2A,
     "mul": 0x1C,
-    "swap": 0x2C,
 }
 
 I_OPCODES = {
@@ -23,6 +22,7 @@ I_OPCODES = {
     "bne": 0x05,
     "loadi": 0x1F,
     "addi3": 0x1E,
+    "swap": 0x1D,
     "bgt": 0x1B,
     "push": 0x1A,
     "pop": 0x19,

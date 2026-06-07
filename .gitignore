@@ -45,3 +45,15 @@ $RECYCLE.BIN/
 Network Trash Folder
 Temporary Items
 .apdisk
+
+# =========================
+# ModelSim / Simulation
+# =========================
+
+work/
+transcript
+*.wlf
+*.vstf
+wlft*
+vsim.wlf
+modelsim.ini

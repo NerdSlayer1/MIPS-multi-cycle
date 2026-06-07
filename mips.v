@@ -8,7 +8,7 @@ module mips(clk, reset);
     wire IorD;
     wire MemRead;
     wire MemWrite;
-    wire MemToReg;
+    wire MemtoReg;
     wire IRWrite;
     wire PCSource;
     wire [1:0] ALUSrcB;
@@ -22,14 +22,14 @@ module mips(clk, reset);
 
     control control_D(
         clk, reset, Op, Zero, GT,
-        IorD, MemRead, MemWrite, MemToReg, IRWrite,
+        IorD, MemRead, MemWrite, MemtoReg, IRWrite,
         PCSource, ALUSrcB, ALUSrcA, RegWrite, RegDst, PCSel, ALUOp
     );
 
     alucontrol alucontrol_D(ALUOp, Function, ALUCtrl);
 
     datapath datapath_D(
-        clk, reset, IorD, MemRead, MemWrite, MemToReg, IRWrite,
+        clk, reset, IorD, MemRead, MemWrite, MemtoReg, IRWrite,
         PCSource, ALUSrcB, ALUSrcA, RegWrite, RegDst, PCSel,
         ALUCtrl, Op, Zero, GT, Function
     );

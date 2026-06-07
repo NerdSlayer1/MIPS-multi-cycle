@@ -68,7 +68,9 @@ PCSource, ALUSrcB, ALUSrcA, RegWrite, RegDst, PCSel, ALUCtrl, Op, Zero, GT, Func
     end
 
     assign da = (Instruction[25:21] != 0) ? registers[Instruction[25:21]] : 0;
-    assign db = (Instruction[20:16] != 0) ? registers[Instruction[20:16]] : 0;
+    assign db = (Op == 6'h1E)
+        ? ((Instruction[15:11] != 0) ? registers[Instruction[15:11]] : 0)
+        : ((Instruction[20:16] != 0) ? registers[Instruction[20:16]] : 0);
 
     always @(posedge clk) begin
         if (RegWrite) begin
@@ -84,6 +86,8 @@ PCSource, ALUSrcB, ALUSrcA, RegWrite, RegDst, PCSel, ALUCtrl, Op, Zero, GT, Func
                 registers[Instruction[20:16]] <= mdr;
                 registers[29] <= registers[29] + 4;
             end
+            else if (Op == 6'h1E)
+                registers[Instruction[20:16]] <= ALUResult;
             else if (RegDst)
                 registers[Instruction[15:11]] <= (MemtoReg) ? mdr : ALUOut;
             else
@@ -116,7 +120,7 @@ PCSource, ALUSrcB, ALUSrcA, RegWrite, RegDst, PCSel, ALUCtrl, Op, Zero, GT, Func
             4'b0110: ALUResult = OpA - OpB;
             4'b0111: ALUResult = (OpA < OpB) ? 1 : 0;
             4'b1100: ALUResult = ~(OpA | OpB);
-            4'b1101: ALUResult = A + B + {{16{Instruction[15]}}, Instruction[15:0]};
+            4'b1101: ALUResult = A + B + {{21{Instruction[10]}}, Instruction[10:0]};
             4'b1110: ALUResult = A * B;
             default: ALUResult = 0;
         endcase
